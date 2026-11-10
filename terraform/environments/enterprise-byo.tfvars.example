@@ -1,0 +1,93 @@
+# =============================================================================
+# DFIR Baboon: Enterprise Bring-Your-Own (BYO) Configuration Example
+#
+# Use this configuration file in regulated / controlled cloud environments
+# where infrastructure components (KMS CMK, S3 buckets, IAM roles, VPCs)
+# are pre-vended by a central cloud platform team, IAM vending machine,
+# or organizational service catalog.
+#
+# Usage:
+#   terraform plan -var-file="environments/enterprise-byo.tfvars"
+#   terraform apply -var-file="environments/enterprise-byo.tfvars"
+# =============================================================================
+
+project_prefix = "dfirbaboon"
+aws_region     = "us-east-1"
+
+# -----------------------------------------------------------------------------
+# 1. KMS Key Management (Central SecOps Managed CMK)
+# -----------------------------------------------------------------------------
+# Disable automated key creation; pass the ARN of the pre-vended forensic key.
+create_kms_key       = false
+existing_kms_key_arn = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789abc"
+
+# -----------------------------------------------------------------------------
+# 2. S3 Storage & Evidence Lake Integration
+# -----------------------------------------------------------------------------
+# Point to a pre-vended intake drop bucket.
+create_intake_bucket        = false
+existing_intake_bucket_name = "secops-forensic-intake-123456789012"
+existing_intake_bucket_arn  = "arn:aws:s3:::secops-forensic-intake-123456789012"
+
+# Use existing organizational CloudTrail audit storage bucket (disable local trail creation).
+create_audit_trail_bucket      = false
+existing_audit_trail_bucket_id = "central-audit-logs-123456789012"
+create_cloudtrail              = false
+
+# Direct incident artifacts to a central enterprise evidence lake.
+# The worker will NOT attempt s3:CreateBucket or s3:PutBucket* administrative calls.
+create_vault_bucket = false
+vault_bucket_name   = "corp-forensic-evidence-lake-prod"
+vault_bucket_arn    = "arn:aws:s3:::corp-forensic-evidence-lake-prod"
+vault_prefix        = "cases/{incident_id}/raw_and_analysis"
+
+# -----------------------------------------------------------------------------
+# 3. Enterprise IAM Governance & Permissions Boundaries
+# -----------------------------------------------------------------------------
+# Option A: Create roles with an enforced organizational permissions boundary.
+create_iam_roles         = true
+permissions_boundary_arn = "arn:aws:iam::123456789012:policy/EnterpriseWorkloadPermissionsBoundary"
+
+# Option B: If your IAM vending machine pre-creates roles, set create_iam_roles = false
+# and supply the existing role ARNs:
+# create_iam_roles                     = false
+# existing_ecs_task_execution_role_arn = "arn:aws:iam::123456789012:role/DFIRWorkerExecutionRole"
+# existing_ecs_task_role_arn           = "arn:aws:iam::123456789012:role/DFIRWorkerTaskRole"
+# existing_batch_instance_role_arn     = "arn:aws:iam::123456789012:role/DFIRBatchInstanceRole"
+# existing_batch_instance_profile_arn  = "arn:aws:iam::123456789012:instance-profile/DFIRBatchInstanceProfile"
+# existing_eventbridge_invoke_role_arn = "arn:aws:iam::123456789012:role/DFIREventBridgeInvokeRole"
+
+# -----------------------------------------------------------------------------
+# 4. Networking & VPC Topology
+# -----------------------------------------------------------------------------
+# Run in private enterprise VPC subnets.
+vpc_id     = "vpc-0123456789abcdef0"
+subnet_ids = [
+  "subnet-0123456789abcdef1",
+  "subnet-0123456789abcdef2"
+]
+
+# If the enterprise VPC already has an S3 Gateway Endpoint attached to route tables,
+# set this to false to avoid duplicate endpoint conflicts.
+create_s3_vpc_endpoint = false
+
+# -----------------------------------------------------------------------------
+# 5. Container Registry & Observability
+# -----------------------------------------------------------------------------
+# If using a centralized enterprise container registry:
+create_ecr_repository       = false
+existing_ecr_repository_url = "123456789012.dkr.ecr.us-east-1.amazonaws.com/secops/dfirbaboon-worker"
+worker_image_tag            = "v1.0.0"
+
+# If using a pre-created CloudWatch log group:
+create_log_group        = false
+existing_log_group_name = "/secops/forensics/dfirbaboon-worker"
+
+# -----------------------------------------------------------------------------
+# 6. Sizing & Routing Rules
+# -----------------------------------------------------------------------------
+large_image_threshold_gib = 50
+fargate_cpu               = 4096
+fargate_memory            = 8192
+ephemeral_storage_gib     = 100
+enable_event_rules        = true
