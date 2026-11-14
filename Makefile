@@ -6,7 +6,8 @@ IMAGE_NAME     ?= $(PROJECT_PREFIX)-worker
 IMAGE_TAG      ?= latest
 ECR_REGISTRY   := $(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 ECR_REPO_URI   := $(ECR_REGISTRY)/$(IMAGE_NAME)
-INTAKE_BUCKET  := $(PROJECT_PREFIX)-intake-$(AWS_ACCOUNT_ID)
+INTAKE_BUCKET_NAME ?=
+INTAKE_BUCKET  ?= $(if $(INTAKE_BUCKET_NAME),$(INTAKE_BUCKET_NAME),$(PROJECT_PREFIX)-intake-$(AWS_ACCOUNT_ID))
 PLATFORM       ?= linux/amd64
 
 .PHONY: help init fmt validate test build push deploy test-drop clean-vaults destroy teardown
@@ -44,7 +45,8 @@ deploy: ## Provision dfirbaboon infrastructure (FORENSIC_MODE=simple|compliance,
 		-var="project_prefix=$(PROJECT_PREFIX)" \
 		-var="forensic_mode=$(FORENSIC_MODE)" \
 		-var="aws_region=$(AWS_REGION)" \
-		-var="worker_image_tag=$(IMAGE_TAG)"
+		-var="worker_image_tag=$(IMAGE_TAG)" \
+		$(if $(INTAKE_BUCKET_NAME),-var="intake_bucket_name=$(INTAKE_BUCKET_NAME)")
 
 test-drop: ## Generate and upload a sample artifact to s3://dfirbaboon-intake-<account_id>/INC10001/test_disk.raw
 	@if [ -z "$(AWS_ACCOUNT_ID)" ]; then \
@@ -74,6 +76,7 @@ destroy: ## Tear down Terraform-managed infrastructure
 	terraform -chdir=terraform destroy \
 		-var="project_prefix=$(PROJECT_PREFIX)" \
 		-var="forensic_mode=$(FORENSIC_MODE)" \
-		-var="aws_region=$(AWS_REGION)"
+		-var="aws_region=$(AWS_REGION)" \
+		$(if $(INTAKE_BUCKET_NAME),-var="intake_bucket_name=$(INTAKE_BUCKET_NAME)")
 
 teardown: clean-vaults destroy ## Full rapid-test teardown (deletes test incident vaults + Terraform destroy)

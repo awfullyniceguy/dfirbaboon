@@ -186,7 +186,9 @@ make deploy FORENSIC_MODE=compliance
 terraform -chdir=terraform apply -var-file="environments/compliance.tfvars.example"
 ```
 
-> By default, Terraform discovers your default VPC and subnets. To target private subnets, pass `-var="vpc_id=vpc-xxxx" -var='subnet_ids=["subnet-aaa","subnet-bbb"]'`.
+> By default, Terraform discovers your default VPC and subnets, and names the intake bucket `<project_prefix>-intake-<account_id>`. To customize:
+> * Private subnets: `-var="vpc_id=vpc-xxxx" -var='subnet_ids=["subnet-aaa","subnet-bbb"]'`
+> * Custom intake bucket name: `make deploy INTAKE_BUCKET_NAME=my-custom-ingest-bucket` (or `-var="intake_bucket_name=my-custom-ingest-bucket"`)
 
 ---
 

@@ -155,6 +155,17 @@ variable "create_intake_bucket" {
   default     = true
 }
 
+variable "intake_bucket_name" {
+  type        = string
+  description = "Optional custom name for the S3 intake bucket when create_intake_bucket is true. Defaults to '<project_prefix>-intake-<account_id>'."
+  default     = null
+
+  validation {
+    condition     = var.intake_bucket_name == null || can(regex("^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$", var.intake_bucket_name))
+    error_message = "intake_bucket_name must be a valid S3 bucket name (3-63 lowercase letters, numbers, hyphens, or periods)."
+  }
+}
+
 variable "existing_intake_bucket_name" {
   type        = string
   description = "Name of pre-existing intake S3 bucket if create_intake_bucket is false"

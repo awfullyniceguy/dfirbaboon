@@ -35,6 +35,7 @@ module "s3" {
   enable_object_lock              = local.is_compliance
   intake_retention_days           = var.intake_retention_days
   create_intake_bucket            = var.create_intake_bucket
+  intake_bucket_name              = var.intake_bucket_name
   existing_intake_bucket_name     = var.existing_intake_bucket_name
   existing_intake_bucket_arn      = var.existing_intake_bucket_arn
   create_audit_trail_bucket       = local.effective_create_audit_trail_bucket

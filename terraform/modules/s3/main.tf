@@ -33,6 +33,12 @@ variable "create_intake_bucket" {
   default     = true
 }
 
+variable "intake_bucket_name" {
+  type        = string
+  description = "Optional custom name for the S3 intake bucket. Defaults to '<project_prefix>-intake-<account_id>' when null."
+  default     = null
+}
+
 variable "existing_intake_bucket_name" {
   type        = string
   description = "Name of pre-existing intake S3 bucket if create_intake_bucket is false"
@@ -67,8 +73,9 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 locals {
-  account_id = data.aws_caller_identity.current.account_id
-  use_kms    = var.kms_key_arn != null && var.kms_key_arn != ""
+  account_id         = data.aws_caller_identity.current.account_id
+  use_kms            = var.kms_key_arn != null && var.kms_key_arn != ""
+  intake_bucket_name = var.intake_bucket_name != null && var.intake_bucket_name != "" ? var.intake_bucket_name : "${var.project_prefix}-intake-${local.account_id}"
 }
 
 # -----------------------------------------------------------------------------
@@ -77,7 +84,7 @@ locals {
 
 resource "aws_s3_bucket" "intake" {
   count         = var.create_intake_bucket ? 1 : 0
-  bucket        = "${var.project_prefix}-intake-${local.account_id}"
+  bucket        = local.intake_bucket_name
   force_destroy = var.force_destroy
 
   tags = {
