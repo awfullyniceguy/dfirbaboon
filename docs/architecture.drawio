@@ -1,0 +1,107 @@
+<mxfile host="drawio-jsapi" modified="2026-11-14T16:43:40.135Z" agent="DrawioJSAPI/1.0.0" version="1.0.0">
+  <diagram id="diagram-1" name="dfirbaboon Architecture">
+  <mxGraphModel dx="1426" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="850">
+    <root>
+      <mxCell id="0" />
+      <mxCell id="1" parent="0" />
+      <mxCell id="aws_cloud" value="AWS Cloud — dfirbaboon Serverless DFIR Pipeline (simple &amp; compliance modes)" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_aws_cloud_alt;strokeColor=#232F3E;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#232F3E" vertex="1" parent="1">
+        <mxGeometry x="20" y="20" width="1320" height="740" as="geometry" />
+      </mxCell>
+      <mxCell id="vpc_group" value="VPC + Egress-Only Security Group + S3 Gateway Endpoint" style="points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=12;fontStyle=0;container=1;pointerEvents=0;collapsible=0;recursiveResize=0;shape=mxgraph.aws4.group;grIcon=mxgraph.aws4.group_vpc2;strokeColor=#8C4FFF;fillColor=none;verticalAlign=top;align=left;spacingLeft=30;fontColor=#AAB7B8" vertex="1" parent="1">
+        <mxGeometry x="560" y="75" width="430" height="390" as="geometry" />
+      </mxCell>
+      <mxCell id="intake_bucket" value="&lt;b&gt;S3 Intake Bucket&lt;/b&gt;&lt;br&gt;dfirbaboon-intake-&amp;lt;acct&amp;gt;" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#7AA116" vertex="1" parent="1">
+        <mxGeometry x="90" y="150" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="eventbridge" value="&lt;b&gt;Amazon EventBridge&lt;/b&gt;&lt;br&gt;Size-Routing Rules" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.eventbridge;fillColor=#E7157B" vertex="1" parent="1">
+        <mxGeometry x="340" y="150" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="ecs_fargate" value="&lt;b&gt;ECS Fargate Worker&lt;/b&gt;&lt;br&gt;&amp;lt;= 50 GiB (4 vCPU, 8 GiB)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.fargate;fillColor=#ED7100" vertex="1" parent="1">
+        <mxGeometry x="610" y="130" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="aws_batch" value="&lt;b&gt;AWS Batch (EC2 i4i.2xlarge)&lt;/b&gt;&lt;br&gt;&amp;gt; 50 GiB (1.8 TB NVMe)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.batch;fillColor=#ED7100" vertex="1" parent="1">
+        <mxGeometry x="610" y="310" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="s3_endpoint" value="&lt;b&gt;S3 Gateway&lt;/b&gt;&lt;br&gt;VPC Endpoint ($0 transfer)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#7AA116" vertex="1" parent="1">
+        <mxGeometry x="840" y="220" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="vault_bucket" value="&lt;b&gt;Incident Vault Bucket&lt;/b&gt;&lt;br&gt;simple: AES256&lt;br&gt;compliance: Object Lock + Legal Hold" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#7AA116" vertex="1" parent="1">
+        <mxGeometry x="1130" y="220" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="cloudwatch" value="&lt;b&gt;CloudWatch Logs &amp;amp; Alarms&lt;/b&gt;&lt;br&gt;/ecs/dfirbaboon-tsk-worker" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudwatch;fillColor=#E7157B" vertex="1" parent="1">
+        <mxGeometry x="610" y="560" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="cloudtrail" value="&lt;b&gt;CloudTrail Forensic Trail&lt;/b&gt;&lt;br&gt;(compliance mode)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.cloudtrail;fillColor=#E7157B" vertex="1" parent="1">
+        <mxGeometry x="900" y="560" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="audit_bucket" value="&lt;b&gt;Audit Trail Bucket&lt;/b&gt;&lt;br&gt;(compliance: Object Lock)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.s3;fillColor=#7AA116" vertex="1" parent="1">
+        <mxGeometry x="1130" y="560" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="kms_cmk" value="&lt;b&gt;AWS KMS CMK&lt;/b&gt;&lt;br&gt;(compliance mode)" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.key_management_service;fillColor=#DD344C" vertex="1" parent="1">
+        <mxGeometry x="90" y="370" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="iam_roles" value="&lt;b&gt;IAM Least-Privilege Roles&lt;/b&gt;&lt;br&gt;Task / Batch / EventBridge" style="sketch=0;points=[[0,0,0],[0.25,0,0],[0.5,0,0],[0.75,0,0],[1,0,0],[0,1,0],[0.25,1,0],[0.5,1,0],[0.75,1,0],[1,1,0],[0,0.25,0],[0,0.5,0],[0,0.75,0],[1,0.25,0],[1,0.5,0],[1,0.75,0]];outlineConnect=0;fontColor=#232F3E;strokeColor=#ffffff;dashed=0;verticalLabelPosition=bottom;verticalAlign=top;align=center;html=1;fontSize=12;fontStyle=0;aspect=fixed;shape=mxgraph.aws4.resourceIcon;resIcon=mxgraph.aws4.iam;fillColor=#DD344C" vertex="1" parent="1">
+        <mxGeometry x="90" y="560" width="78" height="78" as="geometry" />
+      </mxCell>
+      <mxCell id="14" value="S3 Object Created" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="intake_bucket" target="eventbridge">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="15" value="&amp;lt;= 50 GiB (ecs:RunTask)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="eventbridge" target="ecs_fargate">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="16" value="&amp;gt; 50 GiB (batch:SubmitJob)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="eventbridge" target="aws_batch">
+        <mxGeometry relative="1" as="geometry">
+          <Array as="points">
+            <mxPoint x="480" y="189" />
+            <mxPoint x="480" y="349" />
+          </Array>
+        </mxGeometry>
+      </mxCell>
+      <mxCell id="17" value="Stream / Hash" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="ecs_fargate" target="s3_endpoint">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="18" value="Ranged Read" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="aws_batch" target="s3_endpoint">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="19" value="Archive Raw + Reports" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="s3_endpoint" target="vault_bucket">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="20" value="Fargate Logs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="ecs_fargate" target="cloudwatch">
+        <mxGeometry relative="1" as="geometry">
+          <Array as="points">
+            <mxPoint x="530" y="169" />
+            <mxPoint x="530" y="599" />
+          </Array>
+        </mxGeometry>
+      </mxCell>
+      <mxCell id="21" value="Batch Logs" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="aws_batch" target="cloudwatch">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="22" value="S3 Data Events (compliance)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="vault_bucket" target="cloudtrail">
+        <mxGeometry relative="1" as="geometry">
+          <Array as="points">
+            <mxPoint x="1060" y="259" />
+            <mxPoint x="1060" y="490" />
+            <mxPoint x="939" y="490" />
+          </Array>
+        </mxGeometry>
+      </mxCell>
+      <mxCell id="23" value="Audit Logs (WORM)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="cloudtrail" target="audit_bucket">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="24" value="SSE-KMS (compliance)" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="kms_cmk" target="intake_bucket">
+        <mxGeometry relative="1" as="geometry" />
+      </mxCell>
+      <mxCell id="25" value="AssumeRole / Least Privilege" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;labelBackgroundColor=#ffffff;strokeColor=#232F3E;" edge="1" parent="1" source="iam_roles" target="vpc_group">
+        <mxGeometry relative="1" as="geometry">
+          <Array as="points">
+            <mxPoint x="370" y="599" />
+            <mxPoint x="370" y="495" />
+            <mxPoint x="775" y="495" />
+          </Array>
+        </mxGeometry>
+      </mxCell>
+    </root>
+  </mxGraphModel>
+  </diagram>
+</mxfile>

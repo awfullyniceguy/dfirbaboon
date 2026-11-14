@@ -13,6 +13,7 @@
 
 project_prefix = "dfirbaboon"
 aws_region     = "us-east-1"
+forensic_mode  = "compliance"
 
 # -----------------------------------------------------------------------------
 # 1. KMS Key Management (Central SecOps Managed CMK)

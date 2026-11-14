@@ -1,0 +1,15 @@
+# =============================================================================
+# DFIR Baboon: Compliance Mode Configuration Example
+#
+# Enables all evidentiary integrity locks, KMS CMK encryption, S3 Object Lock
+# (COMPLIANCE mode, 365-day retention), Legal Hold on raw evidence, CloudTrail
+# S3 data-event auditing, and tear-down protections (force_destroy = false).
+#
+# Usage:
+#   terraform apply -var-file="environments/compliance.tfvars.example"
+#   make deploy FORENSIC_MODE=compliance
+# =============================================================================
+
+project_prefix = "dfirbaboon"
+aws_region     = "us-east-1"
+forensic_mode  = "compliance"

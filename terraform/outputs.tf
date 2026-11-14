@@ -2,6 +2,11 @@
 # DFIR Baboon: Root Outputs
 # =============================================================================
 
+output "forensic_mode" {
+  description = "Active deployment mode ('simple' or 'compliance')"
+  value       = var.forensic_mode
+}
+
 output "kms_key_arn" {
   description = "ARN of the provisioned forensic KMS CMK"
   value       = module.kms.key_arn

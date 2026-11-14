@@ -1,4 +1,5 @@
 PROJECT_PREFIX ?= dfirbaboon
+FORENSIC_MODE  ?= simple
 AWS_REGION     ?= $(shell aws configure get region 2>/dev/null || echo "us-east-1")
 AWS_ACCOUNT_ID ?= $(shell aws sts get-caller-identity --query Account --output text 2>/dev/null)
 IMAGE_NAME     ?= $(PROJECT_PREFIX)-worker
@@ -8,7 +9,7 @@ ECR_REPO_URI   := $(ECR_REGISTRY)/$(IMAGE_NAME)
 INTAKE_BUCKET  := $(PROJECT_PREFIX)-intake-$(AWS_ACCOUNT_ID)
 PLATFORM       ?= linux/amd64
 
-.PHONY: help init fmt validate test build push deploy test-drop destroy clean
+.PHONY: help init fmt validate test build push deploy test-drop clean-vaults destroy teardown
 
 help: ## Display available Makefile targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
@@ -38,9 +39,10 @@ push: build ## Authenticate to AWS ECR, tag, and push the dfirbaboon-worker imag
 	docker tag $(IMAGE_NAME):$(IMAGE_TAG) $(ECR_REPO_URI):$(IMAGE_TAG)
 	docker push $(ECR_REPO_URI):$(IMAGE_TAG)
 
-deploy: ## Provision the dfirbaboon serverless infrastructure with Terraform
+deploy: ## Provision dfirbaboon infrastructure (FORENSIC_MODE=simple|compliance, default: simple)
 	terraform -chdir=terraform apply \
 		-var="project_prefix=$(PROJECT_PREFIX)" \
+		-var="forensic_mode=$(FORENSIC_MODE)" \
 		-var="aws_region=$(AWS_REGION)" \
 		-var="worker_image_tag=$(IMAGE_TAG)"
 
@@ -58,7 +60,20 @@ test-drop: ## Generate and upload a sample artifact to s3://dfirbaboon-intake-<a
 	@echo "Triggered! Monitor Fargate worker logs in CloudWatch Log Group: /ecs/$(PROJECT_PREFIX)-tsk-worker"
 	@echo "Output vault bucket will be provisioned at: s3://$(PROJECT_PREFIX)-inc10001-$(AWS_ACCOUNT_ID)/"
 
+clean-vaults: ## Delete runtime incident vault buckets (only allowed in simple mode)
+	@if [ "$(FORENSIC_MODE)" = "compliance" ]; then \
+		echo "Error: clean-vaults is disabled when FORENSIC_MODE=compliance."; \
+		exit 1; \
+	fi
+	@for b in $$(aws s3api list-buckets --query "Buckets[?starts_with(Name, '$(PROJECT_PREFIX)-inc')].Name" --output text --region $(AWS_REGION)); do \
+		echo "Deleting test incident vault s3://$$b..."; \
+		aws s3 rb "s3://$$b" --force --region $(AWS_REGION); \
+	done
+
 destroy: ## Tear down Terraform-managed infrastructure
 	terraform -chdir=terraform destroy \
 		-var="project_prefix=$(PROJECT_PREFIX)" \
+		-var="forensic_mode=$(FORENSIC_MODE)" \
 		-var="aws_region=$(AWS_REGION)"
+
+teardown: clean-vaults destroy ## Full rapid-test teardown (deletes test incident vaults + Terraform destroy)

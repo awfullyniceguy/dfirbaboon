@@ -17,6 +17,8 @@ class TestWorkerConfig(unittest.TestCase):
         """Verify default WorkerConfig parameters match production expectations."""
         config = WorkerConfig()
         self.assertEqual(config.project_prefix, "dfirbaboon")
+        self.assertEqual(config.forensic_mode, "simple")
+        self.assertFalse(config.is_compliance_mode)
         self.assertEqual(config.log_level, "INFO")
         self.assertEqual(config.aws_region, "us-east-1")
         self.assertEqual(config.dfir_tool_timeout_sec, 3600)
@@ -31,6 +33,7 @@ class TestWorkerConfig(unittest.TestCase):
         """Verify environment variables correctly override default configurations."""
         env = {
             "PROJECT_PREFIX": "customdfir",
+            "FORENSIC_MODE": "compliance",
             "LOG_LEVEL": "DEBUG",
             "AWS_REGION": "us-west-2",
             "AWS_ACCOUNT_ID": "123456789012",
@@ -45,6 +48,8 @@ class TestWorkerConfig(unittest.TestCase):
         with patch.dict(os.environ, env, clear=True):
             config = WorkerConfig.from_env()
             self.assertEqual(config.project_prefix, "customdfir")
+            self.assertEqual(config.forensic_mode, "compliance")
+            self.assertTrue(config.is_compliance_mode)
             self.assertEqual(config.log_level, "DEBUG")
             self.assertEqual(config.aws_region, "us-west-2")
             self.assertEqual(config.aws_account_id, "123456789012")
@@ -58,6 +63,9 @@ class TestWorkerConfig(unittest.TestCase):
 
     def test_config_validation_errors(self) -> None:
         """Verify invalid configuration options trigger appropriate ValueErrors."""
+        with self.assertRaises(ValueError):
+            WorkerConfig(forensic_mode="invalid")
+
         with self.assertRaises(ValueError):
             WorkerConfig(dfir_tool_timeout_sec=0)
 

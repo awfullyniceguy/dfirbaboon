@@ -120,6 +120,24 @@ class MarkdownExporter:
             else "*(No collector manifest provided; custody established from S3 intake)*"
         )
 
+        is_compliance = self.coc.get("forensic_mode") == "compliance" or bool(self.coc.get("object_lock_enabled", False))
+        kms_display = self.coc.get("kms_key_arn") or ("SSE-KMS" if is_compliance else "AES256 (SSE-S3)")
+        object_lock_display = (
+            "`ENABLED (COMPLIANCE Mode, 365 Days Retention)`"
+            if self.coc.get("object_lock_enabled", is_compliance)
+            else "`DISABLED (simple-forensics mode)`"
+        )
+        legal_hold_display = (
+            "`ACTIVE (LegalHold=ON applied to raw evidence)`"
+            if self.coc.get("legal_hold_applied", is_compliance)
+            else "`DISABLED (simple-forensics mode)`"
+        )
+        audit_display = (
+            "`AWS CloudTrail S3 Data Events & KMS Decrypt Logging Active`"
+            if is_compliance
+            else "`Standard CloudWatch Worker Logs (simple-forensics mode)`"
+        )
+
         coc_rows = [
             ["Pipeline Tool", self.coc.get("tool", "dfirbaboon")],
             ["Incident Identifier", f"`{incident_id}`"],
@@ -136,13 +154,14 @@ class MarkdownExporter:
             ["Intake Timestamp (UTC)", f"`{self.coc.get('intake_timestamp_utc')}`"],
             ["Processed Timestamp (UTC)", f"`{self.coc.get('processed_timestamp_utc')}`"],
             ["The Sleuth Kit Version", f"`{self.coc.get('tsk_version')}`"],
-            ["KMS Encryption Key ARN", f"`{self.coc.get('kms_key_arn', 'SSE-KMS')}`"],
-            ["Vault S3 Object Lock", "`ENABLED (COMPLIANCE Mode, 365 Days Retention)`"],
-            ["S3 Object Legal Hold", "`ACTIVE (LegalHold=ON applied to raw evidence)`"],
+            ["KMS Encryption Key ARN", f"`{kms_display}`"],
+            ["Forensic Mode", f"`{self.coc.get('forensic_mode', 'compliance' if is_compliance else 'simple')}`"],
+            ["Vault S3 Object Lock", object_lock_display],
+            ["S3 Object Legal Hold", legal_hold_display],
             ["Cryptographic Verification", "**VERIFIED (Dual-Hash Checksum Computed Over Full Evidence Stream)**"],
             ["Analysis Status", f"**{str(self.coc.get('analysis_status', 'complete')).upper()}**"],
             ["File System Volumes Analysed", f"`{len(self.coc.get('volumes', [])) or 'none (standalone artifact)'}`"],
-            ["Audit & Access Logging", "`AWS CloudTrail S3 Data Events & KMS Decrypt Logging Active`"],
+            ["Audit & Access Logging", audit_display],
         ]
 
         table_md = self._render_table(coc_rows, headers=["Chain of Custody Field", "Recorded Value"])
@@ -187,7 +206,11 @@ class MarkdownExporter:
             + f"This document establishes the formal cryptographic Chain of Custody (CoC) for evidence artifact "
             + f"`{evidence_file}` ingested by the **dfirbaboon** automated cloud-native DFIR pipeline. "
             + "Dual cryptographic hashes (`SHA-256` and `MD5`) were computed via streaming 16 MiB chunks during "
-            + "transfer from the S3 intake bucket prior to forensic analysis and immutable archival under S3 Object Lock COMPLIANCE mode.\n\n"
+            + (
+                "transfer from the S3 intake bucket prior to forensic analysis and immutable archival under S3 Object Lock COMPLIANCE mode.\n\n"
+                if is_compliance
+                else "transfer from the S3 intake bucket prior to forensic analysis in simple-forensics mode (no S3 Object Lock or Legal Hold).\n\n"
+            )
             + "## Chain of Custody Verification Table\n\n"
             + f"{table_md}\n\n"
             + warnings_md

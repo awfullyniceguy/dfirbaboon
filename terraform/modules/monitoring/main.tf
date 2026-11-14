@@ -5,7 +5,8 @@ variable "project_prefix" {
 
 variable "kms_key_arn" {
   type        = string
-  description = "ARN of the KMS CMK"
+  description = "Optional ARN of the KMS CMK (null in simple mode without CMK)"
+  default     = null
 }
 
 variable "log_retention_days" {
@@ -61,6 +62,7 @@ variable "existing_log_group_name" {
 
 locals {
   log_group_name = var.create_log_group ? aws_cloudwatch_log_group.worker[0].name : var.existing_log_group_name
+  kms_key_id     = var.kms_key_arn != null && var.kms_key_arn != "" ? var.kms_key_arn : null
 
   s3_trail_prefix_arns = compact([
     "${var.intake_bucket_arn}/",
@@ -77,7 +79,7 @@ resource "aws_cloudwatch_log_group" "worker" {
   count             = var.create_log_group ? 1 : 0
   name              = "/ecs/${var.project_prefix}-tsk-worker"
   retention_in_days = var.log_retention_days
-  kms_key_id        = var.kms_key_arn
+  kms_key_id        = local.kms_key_id
 
   tags = {
     Name = "${var.project_prefix}-worker-logs"
@@ -95,7 +97,7 @@ resource "aws_cloudtrail" "forensic_trail" {
   include_global_service_events = true
   is_multi_region_trail         = false
   enable_log_file_validation    = true
-  kms_key_id                    = var.kms_key_arn
+  kms_key_id                    = local.kms_key_id
 
   advanced_event_selector {
     name = "Log all management events"

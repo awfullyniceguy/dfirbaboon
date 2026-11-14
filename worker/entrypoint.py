@@ -82,12 +82,19 @@ def resolve_aws_account_id(sts_client: Any) -> str:
 
 
 def provision_incident_vault_bucket(
-    s3_client: Any, bucket_name: str, region: str, kms_key_arn: str, create_bucket: bool = True
+    s3_client: Any,
+    bucket_name: str,
+    region: str,
+    kms_key_arn: str,
+    create_bucket: bool = True,
+    compliance_mode: bool = False,
+    retention_days: int = 365,
 ) -> None:
-    """Ensure the immutable S3 incident vault bucket exists and is hardened with Object Lock & SSE-KMS.
+    """Ensure the S3 incident vault bucket exists and is configured for the active forensic mode.
 
-    If create_bucket is False, assumes the bucket has been pre-provisioned by a platform team or
-    IAM/S3 vending machine, verifying existence via head_bucket without issuing administrative configuration calls.
+    In compliance mode, enables Object Lock (COMPLIANCE retention), versioning, SSE-KMS, and Glacier IR lifecycle.
+    In simple mode, creates a standard encrypted bucket without Object Lock or versioning for rapid teardown.
+    If create_bucket is False, assumes the bucket has been pre-provisioned and verifies existence via head_bucket.
     """
     if not create_bucket:
         try:
@@ -122,10 +129,12 @@ def provision_incident_vault_bucket(
 
     if not bucket_exists:
         logger.info(
-            "Creating immutable incident vault bucket s3://%s in region %s with Object Lock enabled.",
-            bucket_name, region,
+            "Creating incident vault bucket s3://%s in region %s (mode=%s).",
+            bucket_name, region, "compliance" if compliance_mode else "simple",
         )
-        create_kwargs: Dict[str, Any] = {"Bucket": bucket_name, "ObjectLockEnabledForBucket": True}
+        create_kwargs: Dict[str, Any] = {"Bucket": bucket_name}
+        if compliance_mode:
+            create_kwargs["ObjectLockEnabledForBucket"] = True
         if region and region != "us-east-1":
             create_kwargs["CreateBucketConfiguration"] = {"LocationConstraint": region}
         try:
@@ -143,7 +152,6 @@ def provision_incident_vault_bucket(
             "BlockPublicPolicy": True, "RestrictPublicBuckets": True,
         },
     )
-    s3_client.put_bucket_versioning(Bucket=bucket_name, VersioningConfiguration={"Status": "Enabled"})
 
     encryption_rule: Dict[str, Any] = {
         "ApplyServerSideEncryptionByDefault": {"SSEAlgorithm": "aws:kms" if kms_key_arn else "AES256"},
@@ -155,12 +163,18 @@ def provision_incident_vault_bucket(
         Bucket=bucket_name, ServerSideEncryptionConfiguration={"Rules": [encryption_rule]}
     )
 
+    if not compliance_mode:
+        logger.info("Simple-forensics mode active: skipping Object Lock, versioning, and Glacier IR lifecycle on %s.", bucket_name)
+        return
+
+    s3_client.put_bucket_versioning(Bucket=bucket_name, VersioningConfiguration={"Status": "Enabled"})
+
     try:
         s3_client.put_object_lock_configuration(
             Bucket=bucket_name,
             ObjectLockConfiguration={
                 "ObjectLockEnabled": "Enabled",
-                "Rule": {"DefaultRetention": {"Mode": "COMPLIANCE", "Days": 365}},
+                "Rule": {"DefaultRetention": {"Mode": "COMPLIANCE", "Days": retention_days}},
             },
         )
     except ClientError as exc:
@@ -432,6 +446,7 @@ def copy_evidence_to_vault(
     kms_key_arn: str,
     coc_metadata: Dict[str, Any],
     dest_key: Optional[str] = None,
+    compliance_mode: bool = False,
 ) -> None:
     """Copy the original evidence object (server-side, multipart) to s3://<dest>/<dest_key>."""
     raw_dest_key = dest_key or f"raw_evidence/{evidence_filename}"
@@ -441,7 +456,8 @@ def copy_evidence_to_vault(
         copy_source["VersionId"] = str(coc_metadata["s3_version_id"])
 
     extra = _sse_args(kms_key_arn)
-    extra["StorageClass"] = "GLACIER_IR"
+    if compliance_mode:
+        extra["StorageClass"] = "GLACIER_IR"
     extra["Metadata"] = {
         "incident-id": str(coc_metadata.get("incident_id", "")),
         "sha256": str(coc_metadata.get("sha256", "")),
@@ -461,16 +477,17 @@ def copy_evidence_to_vault(
         ),
     )
 
-    # Apply S3 Legal Hold to raw evidence (NIST SP 800-86 / OSAC Evidence Preservation)
-    try:
-        s3_client.put_object_legal_hold(
-            Bucket=dest_bucket,
-            Key=raw_dest_key,
-            LegalHold={"Status": "ON"},
-        )
-        logger.info("Applied S3 Legal Hold (Status=ON) to s3://%s/%s", dest_bucket, raw_dest_key)
-    except ClientError as exc:
-        logger.warning("Could not apply S3 Legal Hold to s3://%s/%s: %s", dest_bucket, raw_dest_key, exc)
+    if compliance_mode:
+        # Apply S3 Legal Hold to raw evidence (NIST SP 800-86 / OSAC Evidence Preservation)
+        try:
+            s3_client.put_object_legal_hold(
+                Bucket=dest_bucket,
+                Key=raw_dest_key,
+                LegalHold={"Status": "ON"},
+            )
+            logger.info("Applied S3 Legal Hold (Status=ON) to s3://%s/%s", dest_bucket, raw_dest_key)
+        except ClientError as exc:
+            logger.warning("Could not apply S3 Legal Hold to s3://%s/%s: %s", dest_bucket, raw_dest_key, exc)
 
 
 def upload_file(
@@ -600,7 +617,10 @@ def main() -> int:
 
     evidence_filename = Path(source_key).name
     incident_id = extract_incident_id(source_key)
-    logger.info("Starting dfirbaboon pipeline | Incident=%s | Source=s3://%s/%s", incident_id, source_bucket, source_key)
+    logger.info(
+        "Starting dfirbaboon pipeline | Mode=%s | Incident=%s | Source=s3://%s/%s",
+        config.forensic_mode, incident_id, source_bucket, source_key,
+    )
 
     session = boto3.session.Session(region_name=aws_region)
     boto_config = Config(retries={"max_attempts": 10, "mode": "adaptive"}, read_timeout=300, connect_timeout=30, max_pool_connections=64)
@@ -614,8 +634,16 @@ def main() -> int:
         coc_key = config.resolve_vault_key(f"analysis/{evidence_filename}/chain_of_custody.json", incident_id)
         base_s3_prefix = config.resolve_vault_key(f"analysis/{evidence_filename}", incident_id)
 
-        # Step 1: verify or provision & harden the dynamic incident vault
-        provision_incident_vault_bucket(s3_client, dest_bucket, aws_region, kms_key_arn, create_bucket=config.create_vault_bucket)
+        # Step 1: verify or provision & configure the dynamic incident vault
+        provision_incident_vault_bucket(
+            s3_client,
+            dest_bucket,
+            aws_region,
+            kms_key_arn,
+            create_bucket=config.create_vault_bucket,
+            compliance_mode=config.is_compliance_mode,
+            retention_days=config.retention_days,
+        )
 
         # Step 2: download and hash the evidence
         work_dir.mkdir(parents=True, exist_ok=True)
@@ -624,6 +652,9 @@ def main() -> int:
 
         coc_metadata = {
             "tool": "dfirbaboon",
+            "forensic_mode": config.forensic_mode,
+            "object_lock_enabled": config.is_compliance_mode,
+            "legal_hold_applied": config.is_compliance_mode,
             "status": "processing",
             "incident_id": incident_id,
             "evidence_file": evidence_filename,
@@ -649,7 +680,15 @@ def main() -> int:
 
         # Step 3: preserve evidence + checkpoint the chain of custody BEFORE analysis starts
         copy_evidence_to_vault(
-            s3_client, source_bucket, source_key, dest_bucket, evidence_filename, kms_key_arn, coc_metadata, dest_key=raw_evidence_key
+            s3_client,
+            source_bucket,
+            source_key,
+            dest_bucket,
+            evidence_filename,
+            kms_key_arn,
+            coc_metadata,
+            dest_key=raw_evidence_key,
+            compliance_mode=config.is_compliance_mode,
         )
         write_and_upload_coc(s3_client, coc_metadata, work_dir, dest_bucket, evidence_filename, kms_key_arn, dest_key=coc_key)
 

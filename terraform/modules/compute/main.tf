@@ -3,9 +3,22 @@ variable "project_prefix" {
   description = "Project resource naming prefix"
 }
 
+variable "forensic_mode" {
+  type        = string
+  description = "Pipeline execution mode ('simple' or 'compliance')"
+  default     = "simple"
+}
+
+variable "force_destroy" {
+  type        = bool
+  description = "Whether ECR repository allows force deletion with existing images"
+  default     = true
+}
+
 variable "kms_key_arn" {
   type        = string
-  description = "ARN of the KMS CMK"
+  description = "Optional ARN of the KMS CMK (null in simple mode without CMK)"
+  default     = null
 }
 
 variable "worker_image_tag" {
@@ -127,6 +140,7 @@ data "aws_region" "current" {}
 
 locals {
   account_id = data.aws_caller_identity.current.account_id
+  use_kms    = var.kms_key_arn != null && var.kms_key_arn != ""
 
   ecr_repository_url = var.create_ecr_repository ? aws_ecr_repository.worker[0].repository_url : var.existing_ecr_repository_url
   worker_image_uri   = "${local.ecr_repository_url}:${var.worker_image_tag}"
@@ -134,15 +148,16 @@ locals {
   base_env = [
     { name = "AWS_ACCOUNT_ID", value = local.account_id },
     { name = "AWS_DEFAULT_REGION", value = data.aws_region.current.region },
-    { name = "KMS_KEY_ARN", value = var.kms_key_arn },
     { name = "PROJECT_PREFIX", value = var.project_prefix },
+    { name = "FORENSIC_MODE", value = var.forensic_mode },
     { name = "CREATE_VAULT_BUCKET", value = tostring(var.create_vault_bucket) }
   ]
 
+  kms_env          = local.use_kms ? [{ name = "KMS_KEY_ARN", value = var.kms_key_arn }] : []
   vault_bucket_env = var.vault_bucket_name != null ? [{ name = "VAULT_BUCKET", value = var.vault_bucket_name }] : []
   vault_prefix_env = var.vault_prefix != null ? [{ name = "VAULT_PREFIX", value = var.vault_prefix }] : []
 
-  container_env = concat(local.base_env, local.vault_bucket_env, local.vault_prefix_env)
+  container_env = concat(local.base_env, local.kms_env, local.vault_bucket_env, local.vault_prefix_env)
 }
 
 # -----------------------------------------------------------------------------
@@ -153,14 +168,15 @@ resource "aws_ecr_repository" "worker" {
   count                = var.create_ecr_repository ? 1 : 0
   name                 = "${var.project_prefix}-worker"
   image_tag_mutability = "MUTABLE"
+  force_delete         = var.force_destroy
 
   image_scanning_configuration {
     scan_on_push = true
   }
 
   encryption_configuration {
-    encryption_type = "KMS"
-    kms_key         = var.kms_key_arn
+    encryption_type = local.use_kms ? "KMS" : "AES256"
+    kms_key         = local.use_kms ? var.kms_key_arn : null
   }
 
   tags = {
@@ -292,7 +308,7 @@ resource "aws_launch_template" "batch_scratch" {
       iops                  = 6000
       throughput            = 500
       encrypted             = true
-      kms_key_id            = var.kms_key_arn
+      kms_key_id            = local.use_kms ? var.kms_key_arn : null
       delete_on_termination = true
     }
   }

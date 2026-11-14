@@ -10,7 +10,8 @@ variable "intake_bucket_arn" {
 
 variable "kms_key_arn" {
   type        = string
-  description = "ARN of the KMS CMK"
+  description = "Optional ARN of the KMS CMK (null in simple mode without CMK)"
+  default     = null
 }
 
 variable "vault_bucket_arn" {
@@ -66,6 +67,7 @@ data "aws_region" "current" {}
 
 locals {
   account_id = data.aws_caller_identity.current.account_id
+  use_kms    = var.kms_key_arn != null && var.kms_key_arn != ""
 
   vault_bucket_resources = compact([
     "arn:aws:s3:::${var.project_prefix}-inc*",
@@ -112,7 +114,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_managed" {
 }
 
 data "aws_iam_policy_document" "ecs_task_execution_kms" {
-  count = var.create_iam_roles ? 1 : 0
+  count = var.create_iam_roles && local.use_kms ? 1 : 0
 
   statement {
     sid    = "AllowKMSForECRAndLogs"
@@ -129,7 +131,7 @@ data "aws_iam_policy_document" "ecs_task_execution_kms" {
 }
 
 resource "aws_iam_role_policy" "ecs_task_execution_kms" {
-  count  = var.create_iam_roles ? 1 : 0
+  count  = var.create_iam_roles && local.use_kms ? 1 : 0
   name   = "${var.project_prefix}-ecs-execution-kms-policy"
   role   = aws_iam_role.ecs_task_execution[0].id
   policy = data.aws_iam_policy_document.ecs_task_execution_kms[0].json
@@ -219,19 +221,22 @@ data "aws_iam_policy_document" "ecs_task_permissions" {
     resources = local.vault_object_resources
   }
 
-  statement {
-    sid    = "KMSVaultEncryptionAccess"
-    effect = "Allow"
+  dynamic "statement" {
+    for_each = local.use_kms ? [1] : []
+    content {
+      sid    = "KMSVaultEncryptionAccess"
+      effect = "Allow"
 
-    actions = [
-      "kms:Encrypt",
-      "kms:Decrypt",
-      "kms:ReEncrypt*",
-      "kms:GenerateDataKey*",
-      "kms:DescribeKey"
-    ]
+      actions = [
+        "kms:Encrypt",
+        "kms:Decrypt",
+        "kms:ReEncrypt*",
+        "kms:GenerateDataKey*",
+        "kms:DescribeKey"
+      ]
 
-    resources = [var.kms_key_arn]
+      resources = [var.kms_key_arn]
+    }
   }
 
   statement {

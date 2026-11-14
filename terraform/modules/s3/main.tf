@@ -5,7 +5,20 @@ variable "project_prefix" {
 
 variable "kms_key_arn" {
   type        = string
-  description = "KMS Key ARN for server-side encryption"
+  description = "Optional KMS Key ARN for server-side encryption (uses AES256 when null/empty)"
+  default     = null
+}
+
+variable "force_destroy" {
+  type        = bool
+  description = "Whether S3 buckets allow force destruction when non-empty (true in simple mode, false in compliance mode)"
+  default     = false
+}
+
+variable "enable_object_lock" {
+  type        = bool
+  description = "Whether to enable S3 Object Lock on the audit trail bucket (true in compliance mode, false in simple mode)"
+  default     = false
 }
 
 variable "intake_retention_days" {
@@ -55,6 +68,7 @@ data "aws_region" "current" {}
 
 locals {
   account_id = data.aws_caller_identity.current.account_id
+  use_kms    = var.kms_key_arn != null && var.kms_key_arn != ""
 }
 
 # -----------------------------------------------------------------------------
@@ -64,7 +78,7 @@ locals {
 resource "aws_s3_bucket" "intake" {
   count         = var.create_intake_bucket ? 1 : 0
   bucket        = "${var.project_prefix}-intake-${local.account_id}"
-  force_destroy = false
+  force_destroy = var.force_destroy
 
   tags = {
     Name        = "${var.project_prefix}-intake"
@@ -87,10 +101,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "intake" {
 
   rule {
     apply_server_side_encryption_by_default {
-      kms_master_key_id = var.kms_key_arn
-      sse_algorithm     = "aws:kms"
+      kms_master_key_id = local.use_kms ? var.kms_key_arn : null
+      sse_algorithm     = local.use_kms ? "aws:kms" : "AES256"
     }
-    bucket_key_enabled = true
+    bucket_key_enabled = local.use_kms
   }
 }
 
@@ -173,13 +187,26 @@ resource "aws_s3_bucket_policy" "intake" {
 # -----------------------------------------------------------------------------
 
 resource "aws_s3_bucket" "audit_trail" {
-  count         = var.create_audit_trail_bucket ? 1 : 0
-  bucket        = "${var.project_prefix}-audit-trail-${local.account_id}"
-  force_destroy = false
+  count               = var.create_audit_trail_bucket ? 1 : 0
+  bucket              = "${var.project_prefix}-audit-trail-${local.account_id}"
+  force_destroy       = var.force_destroy
+  object_lock_enabled = var.enable_object_lock
 
   tags = {
     Name        = "${var.project_prefix}-audit-trail"
     Environment = "Forensic-Audit"
+  }
+}
+
+resource "aws_s3_bucket_object_lock_configuration" "audit_trail" {
+  count  = var.create_audit_trail_bucket && var.enable_object_lock ? 1 : 0
+  bucket = aws_s3_bucket.audit_trail[0].id
+
+  rule {
+    default_retention {
+      mode = "COMPLIANCE"
+      days = 365
+    }
   }
 }
 
@@ -198,10 +225,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "audit_trail" {
 
   rule {
     apply_server_side_encryption_by_default {
-      kms_master_key_id = var.kms_key_arn
-      sse_algorithm     = "aws:kms"
+      kms_master_key_id = local.use_kms ? var.kms_key_arn : null
+      sse_algorithm     = local.use_kms ? "aws:kms" : "AES256"
     }
-    bucket_key_enabled = true
+    bucket_key_enabled = local.use_kms
   }
 }
 

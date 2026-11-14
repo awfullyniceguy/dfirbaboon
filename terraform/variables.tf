@@ -9,6 +9,17 @@ variable "project_prefix" {
   }
 }
 
+variable "forensic_mode" {
+  type        = string
+  description = "Deployment mode: 'simple' (default, rapid testing & clean teardown without Object Lock/KMS CMK/CloudTrail) or 'compliance' (full evidence locks, KMS CMK, CloudTrail, retention)."
+  default     = "simple"
+
+  validation {
+    condition     = contains(["simple", "compliance"], var.forensic_mode)
+    error_message = "forensic_mode must be either 'simple' or 'compliance'."
+  }
+}
+
 variable "aws_region" {
   type        = string
   description = "Target AWS Region for deployment"
@@ -118,8 +129,8 @@ variable "kms_key_admin_arns" {
 
 variable "cloudwatch_log_retention_days" {
   type        = number
-  description = "Log retention period in days for CloudWatch log groups"
-  default     = 90
+  description = "Log retention period in days for CloudWatch log groups (defaults to 7 in simple mode, 90 in compliance mode)"
+  default     = null
 }
 
 # -----------------------------------------------------------------------------
@@ -128,8 +139,8 @@ variable "cloudwatch_log_retention_days" {
 
 variable "create_kms_key" {
   type        = bool
-  description = "Whether to create a new KMS CMK. Set to false when using an enterprise-managed KMS key."
-  default     = true
+  description = "Whether to create a new KMS CMK. Defaults to true in compliance mode and false in simple mode."
+  default     = null
 }
 
 variable "existing_kms_key_arn" {
@@ -158,8 +169,8 @@ variable "existing_intake_bucket_arn" {
 
 variable "create_audit_trail_bucket" {
   type        = bool
-  description = "Whether to create the CloudTrail audit log S3 bucket. Set to false if using central audit lake."
-  default     = true
+  description = "Whether to create the CloudTrail audit log S3 bucket. Defaults to true in compliance mode and false in simple mode."
+  default     = null
 }
 
 variable "existing_audit_trail_bucket_id" {
@@ -272,8 +283,8 @@ variable "existing_ecr_repository_url" {
 
 variable "create_cloudtrail" {
   type        = bool
-  description = "Whether to create dedicated forensic CloudTrail trail. Set to false if organizational trail is active."
-  default     = true
+  description = "Whether to create dedicated forensic CloudTrail trail. Defaults to true in compliance mode and false in simple mode."
+  default     = null
 }
 
 variable "create_log_group" {

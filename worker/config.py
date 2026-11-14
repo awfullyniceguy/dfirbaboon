@@ -35,6 +35,7 @@ class WorkerConfig:
     """
 
     project_prefix: str = "dfirbaboon"
+    forensic_mode: str = "simple"
     log_level: str = "INFO"
     aws_region: str = "us-east-1"
     aws_account_id: str = ""
@@ -55,6 +56,8 @@ class WorkerConfig:
 
     def __post_init__(self) -> None:
         """Validate configuration parameters upon initialization."""
+        if self.forensic_mode not in ("simple", "compliance"):
+            raise ValueError(f"forensic_mode must be 'simple' or 'compliance', got {self.forensic_mode!r}")
         if self.dfir_tool_timeout_sec <= 0:
             raise ValueError(f"dfir_tool_timeout_sec must be positive, got {self.dfir_tool_timeout_sec}")
         if self.retention_days <= 0:
@@ -63,6 +66,11 @@ class WorkerConfig:
             raise ValueError(f"s3_chunk_size_bytes must be at least 1 MiB, got {self.s3_chunk_size_bytes}")
         if not self.output_directory:
             raise ValueError("output_directory cannot be empty")
+
+    @property
+    def is_compliance_mode(self) -> bool:
+        """Return True when running in strict compliance mode."""
+        return self.forensic_mode == "compliance"
 
     def resolve_vault_bucket_name(self, incident_id: str, account_id: str) -> str:
         """Resolve the target S3 vault bucket name based on explicit override or template."""
@@ -94,6 +102,7 @@ class WorkerConfig:
     def from_env(cls) -> "WorkerConfig":
         """Construct WorkerConfig from process environment variables with safe defaults."""
         project_prefix = os.getenv("PROJECT_PREFIX", "dfirbaboon").strip()
+        forensic_mode = os.getenv("FORENSIC_MODE", "simple").strip().lower()
         log_level = os.getenv("LOG_LEVEL", "INFO").strip().upper()
         aws_region = os.getenv("AWS_DEFAULT_REGION", os.getenv("AWS_REGION", "us-east-1")).strip()
         aws_account_id = os.getenv("AWS_ACCOUNT_ID", "").strip()
@@ -134,6 +143,7 @@ class WorkerConfig:
 
         return cls(
             project_prefix=project_prefix,
+            forensic_mode=forensic_mode,
             log_level=log_level,
             aws_region=aws_region,
             aws_account_id=aws_account_id,
